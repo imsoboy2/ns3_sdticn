@@ -1129,13 +1129,18 @@ void ReceivePacketInSwitch (Ptr<Socket> socket)
         return;
       } else {
         // if (hdr.GetDestination().Get() == ipAddr.Get()) return;// packet received in dst node
-        if (hdr.GetDestination().Get() == ipAddr.Get()) if (hdr.GetDestination().Get() == ipAddr.Get()) {
-          // std::cout << "Forwarding Complete dest ip : " << hdr.GetDestination() << std::endl; 
+        if (hdr.GetDestination().Get() == ipAddr.Get())
+        if (hdr.GetProtocol() == 6) {
+          uint8_t *buffer = new uint8_t[received->GetSize()];
+          received->CopyData(buffer, received->GetSize());
+          uint64_t dst = ((uint64_t) buffer[0] << 40) + ((uint64_t) buffer[1] << 32) + ((uint64_t) buffer[2] << 24) + ((uint64_t) buffer[3] << 16) + ((uint64_t) buffer[4] << 8) + buffer[5];
+          if (macTable[ipAddr.Get()] != dst) return;
+          // std::cout << "Forwarding Complete dest ip : " << hdr.GetDestination() << std::endl;
         if (hdr.GetDestination() == "10.1.1.5")
           {
             int packets_now = received->GetSize();
             int bTotal = packets_now * 1500;
-            throughput_B += (bTotal) / 1000000; 
+            throughput_B += (bTotal) / 1000000;
 
           }
           else if (hdr.GetDestination() == "10.1.1.7")
@@ -1174,34 +1179,8 @@ void ReceivePacketInSwitch (Ptr<Socket> socket)
             int bTotal = packets_now * 1500;
             throughput_H += (bTotal) / 1000000;
           }
-          // else if (hdr.GetDestination() == "10.1.1.5")
-          // {
-          //   int packets_now = received->GetSize();
-          //   int bTotal = packets_now * 1500;
-          //   throughput_I += (bTotal) / 1000000;
-          // }
-          // else if (hdr.GetDestination() == "10.1.1.7")
-          // {
-          //   int packets_now = received->GetSize();
-          //   int bTotal = packets_now * 1500;
-          //   throughput_J += (bTotal) / 1000000;
-          // }
-          // else if (hdr.GetDestination() == "10.1.1.11")
-          // {
-          //   int packets_now = received->GetSize();
-          //   int bTotal = packets_now * 1500;
-          //   throughput_K += (bTotal) / 1000000;
-          // }
-          return;
 
-
-        }// packet received in dst node
-        if (hdr.GetProtocol() == 6) { 
-          // std::cout<<hdr.GetDestination()<<std::endl;
-          uint8_t *buffer = new uint8_t[received->GetSize()];
-          received->CopyData(buffer, received->GetSize());
-          uint64_t dst = ((uint64_t) buffer[0] << 40) + ((uint64_t) buffer[1] << 32) + ((uint64_t) buffer[2] << 24) + ((uint64_t) buffer[3] << 16) + ((uint64_t) buffer[4] << 8) + buffer[5];
-          if (macTable[ipAddr.Get()] != dst) return;
+        // packet received in dst node
           if (ruleTable[socket->GetNode()->GetId() - 1].find(hdr.GetDestination().Get()) != ruleTable[socket->GetNode()->GetId() - 1].end()
                 && ruleTable[socket->GetNode()->GetId() - 1][hdr.GetDestination().Get()] != 0) {
             uint32_t nextHopIp = ruleTable[socket->GetNode()->GetId() - 1][hdr.GetDestination().Get()];
@@ -1212,7 +1191,7 @@ void ReceivePacketInSwitch (Ptr<Socket> socket)
             pkt->AddHeader(hdr);
             std::cout << "FORWARD PACKET: src(" << hdr.GetSource() << ")->dst(" << hdr.GetDestination() << ") in " << ipAddr << "\n";
             if (buffer[6] == (uint8_t)0) {
-              
+
               printf("CRITICIAL PACKET TIER 12\n");
               printf("GO TO SATELITE TIER 12\n");
               socket->SendTo (pkt, 0, InetSocketAddress (Ipv4Address ("10.1.2.1"), 12345));
@@ -1220,7 +1199,7 @@ void ReceivePacketInSwitch (Ptr<Socket> socket)
             else
             {
               Simulator::Schedule (Seconds(jitter), &forwardPacket, socket, pkt);
-            } 
+            }
           }
           
             else {
